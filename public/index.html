@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Trailers Gallery</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            min-height: 100vh;
+        }
+
+        /* Header Styles */
+        .header {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: white;
+            padding: 30px 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #ffffff;
+            margin: 0;
+        }
+
+        .header-subtitle {
+            font-size: 16px;
+            color: #b0b0b0;
+            margin-top: 8px;
+        }
+
+        .btn {
+            padding: 12px 28px;
+            border: none;
+            border-radius: 4px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1976D2;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+        }
+
+        .btn-secondary {
+            background: #666666;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4a4a4a;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .gallery-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .folder-card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .folder-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.2);
+            border-color: #2196F3;
+        }
+
+        .folder-image {
+            width: 100%;
+            height: 280px;
+            background: linear-gradient(135deg, #424242 0%, #1a1a1a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 64px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .folder-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+
+        .folder-card:hover .folder-image img {
+            transform: scale(1.05);
+        }
+
+        .folder-info {
+            padding: 20px;
+        }
+
+        .folder-name {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 10px;
+        }
+
+        .folder-description {
+            color: #555;
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 10px 0;
+            padding: 12px;
+            background: #f8f9fa;
+            border-left: 3px solid #2196F3;
+            border-radius: 4px;
+            min-height: 20px;
+        }
+
+        .folder-description.empty {
+            color: #999;
+            font-style: italic;
+        }
+
+        .folder-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .folder-date {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .folder-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .action-button {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            padding: 8px 16px;
+            border-radius: 4px;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+
+        .action-button:hover {
+            background: #E30613;
+            transform: scale(1.05);
+        }
+
+        .action-button.creating {
+            background: #2196F3;
+            cursor: not-allowed;
+        }
+
+        .action-button.exists {
+            background: #4CAF50;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            font-size: 24px;
+            color: #1a1a1a;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 30px;
+            color: #666;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0;
+        }
+
+        .modal-close:hover {
+            color: #E30613;
+        }
+
+        .modal-body textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: vertical;
+        }
+
+        .modal-body textarea:focus {
+            outline: none;
+            border-color: #2196F3;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            padding: 80px 20px;
+            color: #666;
+            font-size: 20px;
+        }
+
+        .loading-spinner::after {
+            content: '';
+            display: block;
+            width: 50px;
+            height: 50px;
+            margin: 20px auto;
+            border: 5px solid #e0e0e0;
+            border-top-color: #2196F3;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        #statusMessage {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 18px 28px;
+            border-radius: 6px;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease-out;
+            z-index: 999;
+            max-width: 400px;
+        }
+
+        #statusMessage.success {
+            background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+        }
+
+        #statusMessage.error {
+            background: linear-gradient(135deg, #E30613 0%, #C00510 100%);
+        }
+
+        #statusMessage.info {
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .gallery-container {
+                grid-template-columns: 1fr;
+            }
+
+            .folder-actions {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div>
+                <h1>📁 3D Trailers Gallery</h1>
+                <p class="header-subtitle">Professional trailer management system</p>
+            </div>
+            <a href="/admin.html" class="btn btn-secondary">⚙️ Admin Dashboard</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="galleryContainer" class="gallery-container">
+            <div class="loading-spinner">Loading trailers...</div>
+        </div>
+    </div>
+
+    <!-- Description Modal -->
+    <div id="descriptionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Description</h2>
+                <button class="modal-close" onclick="closeDescriptionModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <textarea id="descriptionText" placeholder="Enter description for this folder..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeDescriptionModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveDescription()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Messages -->
+    <div id="statusMessage" class="hidden"></div>
+
+    <script>
+        const API_URL = '/api/drive';
+        let currentFolder = null;
+
+        window.addEventListener('DOMContentLoaded', loadFolders);
+
+        async function loadFolders() {
+            const galleryContainer = document.getElementById('galleryContainer');
+            
+            try {
+                const response = await fetch(`${API_URL}/3d-folders`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to load folders');
+                }
+
+                displayFolders(data.folders);
+            } catch (error) {
+                console.error('Error loading folders:', error);
+                galleryContainer.innerHTML = `
+                    <div class="error-message">
+                        <strong>⚠️ Error Loading Folders</strong>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function displayFolders(folders) {
+            const galleryContainer = document.getElementById('galleryContainer');
+
+            if (!folders || folders.length === 0) {
+                galleryContainer.innerHTML = '<div class="error-message"><strong>No folders found</strong></div>';
+                return;
+            }
+
+            galleryContainer.innerHTML = '';
+            folders.forEach(folder => {
+                const card = createFolderCard(folder);
+                galleryContainer.appendChild(card);
+            });
+        }
+
+        function createFolderCard(folder) {
+            const card = document.createElement('div');
+            card.className = 'folder-card';
+            card.title = `Click to open "${folder.name}" in Google Drive`;
+
+            const imageSection = document.createElement('div');
+            imageSection.className = 'folder-image';
+            imageSection.onclick = () => openFolder(folder.id, folder.name);
+
+            const uploadsButton = document.createElement('button');
+            uploadsButton.className = 'action-button';
+            uploadsButton.textContent = '+ Create Uploads';
+            uploadsButton.onclick = (e) => {
+                e.stopPropagation();
+                createUploadsFolder(folder.id, folder.name, uploadsButton);
+            };
+            imageSection.appendChild(uploadsButton);
+
+            if (folder.image && folder.image.id) {
+                imageSection.classList.add('loading');
+                loadHighQualityImage(folder.image.id, imageSection, uploadsButton);
+            } else {
+                imageSection.className = 'folder-image no-image';
+                imageSection.innerHTML = uploadsButton.outerHTML + '📁';
+            }
+
+            const infoSection = document.createElement('div');
+            infoSection.className = 'folder-info';
+
+            const folderName = document.createElement('div');
+            folderName.className = 'folder-name';
+            folderName.textContent = folder.name;
+            folderName.onclick = () => openFolder(folder.id, folder.name);
+
+            const folderDescription = document.createElement('div');
+            folderDescription.className = 'folder-description';
+            if (folder.description) {
+                folderDescription.textContent = folder.description;
+            } else {
+                folderDescription.textContent = 'No description';
+                folderDescription.classList.add('empty');
+            }
+
+            const folderMeta = document.createElement('div');
+            folderMeta.className = 'folder-meta';
+
+            const folderDate = document.createElement('div');
+            folderDate.className = 'folder-date';
+            folderDate.textContent = `Modified: ${new Date(folder.modifiedTime).toLocaleDateString()}`;
+
+            const folderActions = document.createElement('div');
+            folderActions.className = 'folder-actions';
+
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn btn-primary btn-small';
+            editBtn.textContent = '✏️ Edit';
+            editBtn.onclick = (e) => {
+                e.stopPropagation();
+                openDescriptionModal(folder.id, folder.name, folder.description || '');
+            };
+
+            const openBtn = document.createElement('button');
+            openBtn.className = 'btn btn-secondary btn-small';
+            openBtn.textContent = 'Open';
+            openBtn.onclick = (e) => {
+                e.stopPropagation();
+                openFolder(folder.id, folder.name);
+            };
+
+            folderActions.appendChild(editBtn);
+            folderActions.appendChild(openBtn);
+            folderMeta.appendChild(folderDate);
+            folderMeta.appendChild(folderActions);
+
+            infoSection.appendChild(folderName);
+            infoSection.appendChild(folderDescription);
+            infoSection.appendChild(folderMeta);
+
+            card.appendChild(imageSection);
+            card.appendChild(infoSection);
+
+            return card;
+        }
+
+        async function loadHighQualityImage(imageId, imageSection, uploadsButton) {
+            try {
+                const response = await fetch(`${API_URL}/image/${imageId}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    const img = document.createElement('img');
+                    img.src = `data:${data.mimeType};base64,${data.base64}`;
+                    img.alt = 'Folder preview';
+                    img.onload = () => imageSection.classList.remove('loading');
+                    imageSection.appendChild(img);
+                    imageSection.appendChild(uploadsButton);
+                }
+            } catch (error) {
+                console.error('Error loading image:', error);
+                imageSection.classList.remove('loading');
+                imageSection.className = 'folder-image no-image';
+                imageSection.innerHTML = uploadsButton.outerHTML + '📁';
+            }
+        }
+
+        function openFolder(folderId, folderName) {
+            window.open(`https://drive.google.com/drive/folders/${folderId}`, '_blank');
+        }
+
+        async function createUploadsFolder(folderId, folderName, buttonElement) {
+            buttonElement.textContent = 'Creating...';
+            buttonElement.classList.add('creating');
+            buttonElement.disabled = true;
+
+            try {
+                showStatus('Creating uploads folder...', 'info');
+                const response = await fetch(`${API_URL}/create-uploads-folder`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ folderId, folderName })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showStatus(`✓ ${data.message}`, 'success');
+                    buttonElement.textContent = '✓ Uploads Exists';
+                    buttonElement.classList.remove('creating');
+                    buttonElement.classList.add('exists');
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                showStatus('❌ ' + error.message, 'error');
+                buttonElement.textContent = '+ Create Uploads';
+                buttonElement.classList.remove('creating');
+                buttonElement.disabled = false;
+            }
+        }
+
+        function openDescriptionModal(folderId, folderName, description) {
+            currentFolder = { id: folderId, name: folderName };
+            document.getElementById('descriptionText').value = description;
+            document.getElementById('descriptionModal').classList.add('show');
+        }
+
+        function closeDescriptionModal() {
+            document.getElementById('descriptionModal').classList.remove('show');
+            currentFolder = null;
+        }
+
+        async function saveDescription() {
+            if (!currentFolder) return;
+
+            const description = document.getElementById('descriptionText').value;
+
+            try {
+                showStatus('Saving description...', 'info');
+                const response = await fetch(`${API_URL}/save-description`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        folderId: currentFolder.id,
+                        folderName: currentFolder.name,
+                        description: description
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showStatus('✓ ' + data.message, 'success');
+                    closeDescriptionModal();
+                    loadFolders(); // Reload to show updated description
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                showStatus('❌ ' + error.message, 'error');
+            }
+        }
+
+        function showStatus(message, type = 'info') {
+            const statusMessage = document.getElementById('statusMessage');
+            statusMessage.textContent = message;
+            statusMessage.className = type;
+            statusMessage.classList.remove('hidden');
+            setTimeout(() => statusMessage.classList.add('hidden'), 5000);
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('descriptionModal').addEventListener('click', (e) => {
+            if (e.target.id === 'descriptionModal') {
+                closeDescriptionModal();
+            }
+        });
+    </script>
+</body>
+</html>
