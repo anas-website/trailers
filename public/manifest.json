@@ -1,0 +1,27 @@
+{
+  "name": "3D Trailers Gallery",
+  "short_name": "Trailers",
+  "description": "Professional trailer management system",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#2196F3",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "Logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "Logo.png", 
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "lang": "en",
+  "dir": "ltr"
+}
