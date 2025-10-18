@@ -4,7 +4,7 @@ A Node.js web application with Express server that integrates with Google Drive 
 
 ## Features
 
-- 🔐 OAuth2 authentication with Google Drive
+- 🔐 Service account authentication with Google Drive
 - ⬆️ Upload files to Google Drive
 - 📥 Download files from Google Drive
 - 👁️ View files in Google Drive
@@ -43,33 +43,49 @@ npm install
    - Search for "Google Drive API"
    - Click "Enable"
 
-4. Create OAuth2 Credentials:
+4. Create Service Account Credentials:
    - Go to "APIs & Services" > "Credentials"
-   - Click "Create Credentials" > "OAuth client ID"
-   - Select "Web application"
-   - Add authorized redirect URIs:
-     - For local development: `http://localhost:3000/api/drive/oauth2callback`
-     - For Heroku: `https://your-app-name.herokuapp.com/api/drive/oauth2callback`
-   - Click "Create"
-   - Save your Client ID and Client Secret
+   - Click "Create Credentials" > "Service Account"
+   - Fill in the service account details and click "Create"
+   - Grant the service account appropriate roles (optional)
+   - Click "Done"
+   - Click on the created service account
+   - Go to "Keys" tab
+   - Click "Add Key" > "Create new key"
+   - Select "JSON" and click "Create"
+   - Save the downloaded JSON file as `credentials.json` in your project root
+
+5. Share Google Drive folder with service account:
+   - Open Google Drive
+   - Right-click on the folder you want to access
+   - Click "Share"
+   - Add the service account email (found in credentials.json as `client_email`)
+   - Grant appropriate permissions (Viewer, Editor, etc.)
 
 ### 4. Configure Environment Variables
 
-1. Copy the example environment file:
+1. Create `.env` file with your credentials:
    ```bash
    cp env.example .env
    ```
 
-2. Edit `.env` file with your Google OAuth2 credentials:
+2. Run the helper script to populate your `.env` file:
+   ```bash
+   node get-heroku-credentials.js
    ```
-   GOOGLE_CLIENT_ID=your_client_id_here
-   GOOGLE_CLIENT_SECRET=your_client_secret_here
-   GOOGLE_REDIRECT_URI=http://localhost:3000/api/drive/oauth2callback
-   GOOGLE_REFRESH_TOKEN=
+   Copy the JSON output and add it to your `.env` file as:
+   ```
    PORT=3000
+   
+   GOOGLE_CREDENTIALS=<paste_json_here>
    ```
 
-### 5. Get Refresh Token
+**Note:** The app will automatically use credentials from:
+- `.env` file for local development (via `GOOGLE_CREDENTIALS` variable)
+- `credentials.json` file as fallback if environment variable is not set
+- Heroku environment variables in production
+
+### 5. Test the Application
 
 1. Start the server:
    ```bash
@@ -78,21 +94,12 @@ npm install
 
 2. Open your browser and go to `http://localhost:3000`
 
-3. Click "Get Authorization URL" button
+3. Test the application:
 
-4. Click the authorization link and grant permissions
-
-5. You'll be redirected back with a refresh token displayed on the page
-
-6. Copy the refresh token and add it to your `.env` file as `GOOGLE_REFRESH_TOKEN`
-
-7. Restart the server
-
-### 6. Test the Application
-
-1. Click "Refresh" button to load your Google Drive files
-2. Try uploading a file
-3. Test download, view, and delete functions
+   - The gallery will automatically load folders from the "3D" folder in your Google Drive
+   - Click on any folder to open it in Google Drive
+   - Use the Edit button to add descriptions to folders
+   - Use the "Create Uploads" button to create an uploads folder inside any trailer folder
 
 ## Project Structure
 
@@ -105,23 +112,20 @@ trailers-web/
 ├── services/
 │   └── driveService.js          # Google Drive API integration
 ├── public/
-│   ├── index.html               # Main HTML page
-│   ├── styles.css               # Styles
-│   └── app.js                   # Frontend JavaScript
+│   ├── index.html               # Main gallery page with inline JavaScript
+│   └── styles.css               # Styles
 ├── server.js                    # Express server setup
+├── get-heroku-credentials.js    # Helper script for Heroku deployment
 ├── package.json                 # Dependencies
 ├── Procfile                     # Heroku process file
 ├── app.json                     # Heroku app configuration
 ├── .gitignore                   # Git ignore file
 ├── env.example                  # Environment variables template
+├── HEROKU-SETUP.md              # Heroku deployment guide
 └── README.md                    # This file
 ```
 
 ## API Endpoints
-
-### Authentication
-- `GET /api/drive/auth-url` - Get OAuth2 authorization URL
-- `GET /api/drive/oauth2callback` - OAuth2 callback endpoint
 
 ### File Operations
 - `GET /api/drive/files` - List files from Google Drive
@@ -133,6 +137,12 @@ trailers-web/
 - `PUT /api/drive/files/:fileId` - Update file in Google Drive
   - Form data: `file` (optional), `name` (optional), `description` (optional)
 - `DELETE /api/drive/files/:fileId` - Delete file from Google Drive
+
+### 3D Gallery Operations
+- `GET /api/drive/3d-folders` - Get all folders from "3D" folder with their first image
+- `GET /api/drive/image/:fileId` - Get image as base64
+- `POST /api/drive/create-uploads-folder` - Create uploads folder in a 3D subfolder
+- `POST /api/drive/save-description` - Save or update description for a folder
 
 ## Deploying to Heroku
 
@@ -150,12 +160,25 @@ trailers-web/
    heroku create your-app-name
    ```
 
-4. Set environment variables on Heroku:
+4. Set up Google credentials on Heroku:
+   
+   **Option 1: Using the helper script (Recommended)**
    ```bash
-   heroku config:set GOOGLE_CLIENT_ID=your_client_id
-   heroku config:set GOOGLE_CLIENT_SECRET=your_client_secret
-   heroku config:set GOOGLE_REDIRECT_URI=https://your-app-name.herokuapp.com/api/drive/oauth2callback
+   node get-heroku-credentials.js
    ```
+   This will output a `heroku config:set` command that you can copy and run.
+   
+   **Option 2: Manual setup via Heroku CLI**
+   ```bash
+   heroku config:set GOOGLE_CREDENTIALS="$(cat credentials.json | tr -d '\n')"
+   ```
+   
+   **Option 3: Via Heroku Dashboard**
+   - Go to your app's Settings tab
+   - Click "Reveal Config Vars"
+   - Add a new config var:
+     - Key: `GOOGLE_CREDENTIALS`
+     - Value: Copy the entire contents of `credentials.json` (as a single line)
 
 5. Initialize git repository (if not already done):
    ```bash
@@ -175,18 +198,6 @@ trailers-web/
    heroku open
    ```
 
-8. Get the refresh token:
-   - Follow steps in "Get Refresh Token" section using your Heroku URL
-   - Set the refresh token on Heroku:
-     ```bash
-     heroku config:set GOOGLE_REFRESH_TOKEN=your_refresh_token
-     ```
-
-9. Restart the app:
-   ```bash
-   heroku restart
-   ```
-
 ### Method 2: Using Heroku Dashboard
 
 1. Go to [Heroku Dashboard](https://dashboard.heroku.com/)
@@ -194,15 +205,20 @@ trailers-web/
 3. Choose an app name and region
 4. Go to "Settings" tab
 5. Click "Reveal Config Vars"
-6. Add all environment variables from `.env` file
+6. Add a new config var:
+   - Key: `GOOGLE_CREDENTIALS`
+   - Value: Run `node get-heroku-credentials.js` locally and copy the JSON output
 7. Go to "Deploy" tab
 8. Connect your GitHub repository
 9. Click "Deploy Branch"
 
-### Update Google OAuth Redirect URI
+### Important Notes for Heroku Deployment
 
-Don't forget to add your Heroku app URL to the authorized redirect URIs in Google Cloud Console:
-- `https://your-app-name.herokuapp.com/api/drive/oauth2callback`
+- The app will automatically use the `GOOGLE_CREDENTIALS` environment variable on Heroku
+- For local development, it will fall back to the `credentials.json` file
+- Make sure the service account has access to your Google Drive folders
+- For security, never commit `credentials.json` to public repositories
+- The `credentials.json` file should remain in `.gitignore`
 
 ## Development
 
@@ -214,17 +230,21 @@ npm run dev
 
 ## Troubleshooting
 
-### "Invalid grant" error
-- Your refresh token may have expired
-- Re-authorize the application to get a new refresh token
+### "No credentials found" error
+- **For local development**: Make sure `credentials.json` is in the project root directory
+- **For Heroku**: Make sure `GOOGLE_CREDENTIALS` environment variable is set
+- Run `node get-heroku-credentials.js` to get the proper format for Heroku
+- Verify the JSON is valid (no syntax errors)
 
-### "Invalid client" error
-- Check your Client ID and Client Secret
-- Make sure they are correctly set in environment variables
+### "3D folder not found" error
+- Create a folder named "3D" in your Google Drive
+- Share the folder with the service account email
+- Verify the service account has proper permissions
 
 ### Files not loading
-- Check if refresh token is set correctly
+- Verify the service account has access to the folders
 - Make sure Google Drive API is enabled
+- Check that credentials.json is valid
 - Check server logs for detailed error messages
 
 ### Heroku deployment issues
@@ -234,11 +254,13 @@ npm run dev
 
 ## Security Notes
 
-- Never commit `.env` file to git
-- Keep your Client Secret and Refresh Token secure
-- Use environment variables for all sensitive data
+- Never commit `.env` or `credentials.json` files to public repositories
+- Keep your service account credentials secure
+- Use environment variables or secure storage for sensitive data
 - For production, consider implementing user authentication
 - Implement rate limiting for API endpoints
+- Regularly rotate service account keys
+- Grant minimum required permissions to the service account
 
 ## Technologies Used
 

@@ -1,43 +1,4 @@
-const { google } = require('googleapis');
 const driveService = require('../services/driveService');
-
-// Get authorization URL
-exports.getAuthUrl = async (req, res) => {
-  try {
-    const authUrl = driveService.getAuthUrl();
-    res.json({ authUrl });
-  } catch (error) {
-    console.error('Error getting auth URL:', error);
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// OAuth2 callback
-exports.oauth2callback = async (req, res) => {
-  const { code } = req.query;
-  
-  if (!code) {
-    return res.status(400).send('No authorization code provided');
-  }
-
-  try {
-    const tokens = await driveService.getTokenFromCode(code);
-    res.send(`
-      <html>
-        <body>
-          <h2>Authorization Successful!</h2>
-          <p>Your refresh token:</p>
-          <pre style="background: #f4f4f4; padding: 10px; overflow-x: auto;">${tokens.refresh_token}</pre>
-          <p>Copy this refresh token and add it to your .env file as GOOGLE_REFRESH_TOKEN</p>
-          <p>You can close this window now.</p>
-        </body>
-      </html>
-    `);
-  } catch (error) {
-    console.error('Error getting tokens:', error);
-    res.status(500).send('Error during authorization: ' + error.message);
-  }
-};
 
 // List files from Google Drive
 exports.listFiles = async (req, res) => {
@@ -196,6 +157,23 @@ exports.saveDescription = async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('Error saving description:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Test folder permissions
+exports.testFolderPermissions = async (req, res) => {
+  try {
+    const { folderId } = req.body;
+    
+    if (!folderId) {
+      return res.status(400).json({ error: 'Folder ID is required' });
+    }
+
+    const result = await driveService.testFolderPermissions(folderId);
+    res.json(result);
+  } catch (error) {
+    console.error('Error testing permissions:', error);
     res.status(500).json({ error: error.message });
   }
 };

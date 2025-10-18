@@ -1,6 +1,6 @@
 {
   "name": "Google Drive Manager",
-  "description": "A Node.js app with Express server and Google Drive integration",
+  "description": "A Node.js app with Express server and Google Drive integration using service account",
   "repository": "https://github.com/your-username/your-repo",
   "keywords": ["node", "express", "google-drive"],
   "image": "heroku/nodejs",
@@ -9,23 +9,6 @@
       "url": "heroku/nodejs"
     }
   ],
-  "env": {
-    "GOOGLE_CLIENT_ID": {
-      "description": "Google OAuth2 Client ID",
-      "required": true
-    },
-    "GOOGLE_CLIENT_SECRET": {
-      "description": "Google OAuth2 Client Secret",
-      "required": true
-    },
-    "GOOGLE_REDIRECT_URI": {
-      "description": "OAuth2 Redirect URI (should be https://your-app-name.herokuapp.com/api/drive/oauth2callback)",
-      "required": true
-    },
-    "GOOGLE_REFRESH_TOKEN": {
-      "description": "Google OAuth2 Refresh Token (get this after first authorization)",
-      "required": false
-    }
-  }
+  "env": {}
 }
 

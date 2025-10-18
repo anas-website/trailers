@@ -26,12 +26,6 @@ router.delete('/files/:fileId', driveController.deleteFile);
 // Update file in Google Drive
 router.put('/files/:fileId', upload.single('file'), driveController.updateFile);
 
-// OAuth callback
-router.get('/oauth2callback', driveController.oauth2callback);
-
-// Get authorization URL
-router.get('/auth-url', driveController.getAuthUrl);
-
 // Get 3D folders with images
 router.get('/3d-folders', driveController.get3DFolders);
 
@@ -43,6 +37,9 @@ router.post('/create-uploads-folder', driveController.createUploadsFolder);
 
 // Save description
 router.post('/save-description', driveController.saveDescription);
+
+// Test folder permissions
+router.post('/test-permissions', driveController.testFolderPermissions);
 
 module.exports = router;
 

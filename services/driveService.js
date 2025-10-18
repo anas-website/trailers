@@ -1,43 +1,39 @@
 const { google } = require('googleapis');
 const stream = require('stream');
+const path = require('path');
+const fs = require('fs');
 
 class DriveService {
   constructor() {
-    this.oauth2Client = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET,
-      process.env.GOOGLE_REDIRECT_URI
-    );
-   
-
-    // Set credentials if refresh token is available
-    if (process.env.GOOGLE_REFRESH_TOKEN) {
-      this.oauth2Client.setCredentials({
-        refresh_token: process.env.GOOGLE_REFRESH_TOKEN
-      });
+    // Use service account authentication
+    let credentials;
+    
+    // Check if GOOGLE_CREDENTIALS environment variable exists (for Heroku)
+    if (process.env.GOOGLE_CREDENTIALS) {
+      try {
+        credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+      } catch (error) {
+        throw new Error('Invalid GOOGLE_CREDENTIALS environment variable. Must be valid JSON.');
+      }
+    } else {
+      // Fall back to credentials.json file (for local development)
+      const credentialsPath = path.join(__dirname, '../credentials.json');
+      if (fs.existsSync(credentialsPath)) {
+        credentials = require(credentialsPath);
+      } else {
+        throw new Error('No credentials found. Please set GOOGLE_CREDENTIALS environment variable or create credentials.json file.');
+      }
     }
-
-    this.drive = google.drive({ version: 'v3', auth: this.oauth2Client });
-  }
-
-  // Get authorization URL
-  getAuthUrl() {
-    const scopes = [
-      'https://www.googleapis.com/auth/drive.file',
-      'https://www.googleapis.com/auth/drive'
-    ];
-
-    return this.oauth2Client.generateAuthUrl({
-      access_type: 'offline',
-      scope: scopes,
-      prompt: 'consent'
+    
+    this.auth = new google.auth.GoogleAuth({
+      credentials: credentials,
+      scopes: [
+        'https://www.googleapis.com/auth/drive',
+        'https://www.googleapis.com/auth/drive.file'
+      ]
     });
-  }
 
-  // Get tokens from authorization code
-  async getTokenFromCode(code) {
-    const { tokens } = await this.oauth2Client.getToken(code);
-    return tokens;
+    this.drive = google.drive({ version: 'v3', auth: this.auth });
   }
 
   // List files from Google Drive
@@ -61,6 +57,45 @@ class DriveService {
       return response.data;
     } catch (error) {
       throw new Error(`Failed to list files: ${error.message}`);
+    }
+  }
+
+  // Test if service account can create files in a folder
+  async testFolderPermissions(folderId) {
+    try {
+      const testFileName = '_test_permission_' + Date.now() + '.txt';
+      const bufferStream = new stream.PassThrough();
+      bufferStream.end(Buffer.from('test', 'utf8'));
+      
+      const fileMetadata = {
+        name: testFileName,
+        parents: [folderId]
+      };
+
+      const response = await this.drive.files.create({
+        requestBody: fileMetadata,
+        media: {
+          mimeType: 'text/plain',
+          body: bufferStream
+        },
+        fields: 'id',
+        supportsAllDrives: true
+      });
+
+      // Delete the test file immediately
+      await this.drive.files.delete({ 
+        fileId: response.data.id,
+        supportsAllDrives: true 
+      });
+
+      return { canCreate: true, message: 'Success' };
+    } catch (error) {
+      return { 
+        canCreate: false, 
+        message: error.message.includes('Service Accounts') 
+          ? 'No Editor permission' 
+          : error.message 
+      };
     }
   }
 
@@ -116,7 +151,8 @@ class DriveService {
           mimeType,
           body: bufferStream
         },
-        fields: 'id, name, mimeType, size, createdTime, webViewLink'
+        fields: 'id, name, mimeType, size, createdTime, webViewLink',
+        supportsAllDrives: true
       });
 
       return response.data;
@@ -171,7 +207,9 @@ class DriveService {
       const response = await this.drive.files.list({
         q: `name='${folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
         fields: 'files(id, name)',
-        pageSize: 1
+        pageSize: 1,
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true
       });
       
       if (response.data.files && response.data.files.length > 0) {
@@ -189,7 +227,9 @@ class DriveService {
       const response = await this.drive.files.list({
         q: `'${parentFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
         fields: 'files(id, name, createdTime, modifiedTime)',
-        orderBy: 'name'
+        orderBy: 'name',
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true
       });
       
       return response.data.files || [];
@@ -295,11 +335,17 @@ class DriveService {
 
       const response = await this.drive.files.create({
         requestBody: fileMetadata,
-        fields: 'id, name, createdTime'
+        fields: 'id, name, createdTime',
+        supportsAllDrives: true,
+        supportsTeamDrives: true
       });
 
       return response.data;
     } catch (error) {
+      // Check for permission error
+      if (error.message && error.message.includes('Service Accounts do not have storage quota')) {
+        throw new Error('Permission denied: The folder must be shared with Editor permissions. Share the folder with: tr11-142@trailers-475407.iam.gserviceaccount.com and grant "Editor" access.');
+      }
       throw new Error(`Failed to create folder: ${error.message}`);
     }
   }
@@ -310,7 +356,9 @@ class DriveService {
       const response = await this.drive.files.list({
         q: `name='${folderName}' and '${parentFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
         fields: 'files(id, name)',
-        pageSize: 1
+        pageSize: 1,
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true
       });
       
       if (response.data.files && response.data.files.length > 0) {
@@ -355,7 +403,9 @@ class DriveService {
       const response = await this.drive.files.list({
         q: `name='${fileName}' and '${parentFolderId}' in parents and mimeType='text/plain' and trashed=false`,
         fields: 'files(id, name)',
-        pageSize: 1
+        pageSize: 1,
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true
       });
       
       if (response.data.files && response.data.files.length > 0) {
@@ -388,14 +438,19 @@ class DriveService {
       const existingFile = await this.checkTextFileExists(fileName, parentFolderId);
       
       if (existingFile) {
-        // Update existing file
+        // Update existing file - create stream for update
+        const bufferStream = new stream.PassThrough();
+        bufferStream.end(Buffer.from(content, 'utf8'));
+        
         const response = await this.drive.files.update({
           fileId: existingFile.id,
           media: {
             mimeType: 'text/plain',
-            body: content
+            body: bufferStream
           },
-          fields: 'id, name, modifiedTime'
+          fields: 'id, name, modifiedTime',
+          supportsAllDrives: true,
+          supportsTeamDrives: true
         });
         
         return {
@@ -404,7 +459,10 @@ class DriveService {
           message: 'Description updated successfully'
         };
       } else {
-        // Create new file
+        // Create new file - create stream for creation
+        const bufferStream = new stream.PassThrough();
+        bufferStream.end(Buffer.from(content, 'utf8'));
+        
         const fileMetadata = {
           name: fileName,
           mimeType: 'text/plain',
@@ -415,9 +473,11 @@ class DriveService {
           requestBody: fileMetadata,
           media: {
             mimeType: 'text/plain',
-            body: content
+            body: bufferStream
           },
-          fields: 'id, name, createdTime'
+          fields: 'id, name, createdTime',
+          supportsAllDrives: true,
+          supportsTeamDrives: true
         });
         
         return {
@@ -427,6 +487,10 @@ class DriveService {
         };
       }
     } catch (error) {
+      // Check for permission error
+      if (error.message.includes('Service Accounts do not have storage quota')) {
+        throw new Error('Permission denied: The folder must be shared with Editor permissions. Share the folder with: tr11-142@trailers-475407.iam.gserviceaccount.com and grant "Editor" access.');
+      }
       throw new Error(`Failed to create/update text file: ${error.message}`);
     }
   }

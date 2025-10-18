@@ -43,6 +43,18 @@
             margin: 0;
         }
 
+        .logo {
+            height: 60px;
+            margin-right: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .header-title-section {
+            display: flex;
+            align-items: center;
+        }
+
         .header-subtitle {
             font-size: 16px;
             color: #b0b0b0;
@@ -64,7 +76,7 @@
         }
 
         .btn-primary {
-            background: #2196F3;
+            background: #0f4572;
             color: white;
         }
 
@@ -382,11 +394,13 @@
 <body>
     <div class="header">
         <div class="header-content">
-            <div>
-                <h1>📁 3D Trailers Gallery</h1>
-                <p class="header-subtitle">Professional trailer management system</p>
+            <div class="header-title-section">
+                <img src="Logo.png" alt="Abu Mod Trailers Logo" class="logo">
+                <div>
+                    <h1>📁 3D Trailers Gallery</h1>
+                    <p class="header-subtitle">Professional trailer management system</p>
+                </div>
             </div>
-            <a href="/admin.html" class="btn btn-secondary">⚙️ Admin Dashboard</a>
         </div>
     </div>
 
@@ -483,7 +497,11 @@
                 loadHighQualityImage(folder.image.id, imageSection, uploadsButton);
             } else {
                 imageSection.className = 'folder-image no-image';
-                imageSection.innerHTML = uploadsButton.outerHTML + '📁';
+                // Create emoji element (button already appended above)
+                const emojiSpan = document.createElement('span');
+                emojiSpan.textContent = '📁';
+                emojiSpan.style.fontSize = '64px';
+                imageSection.appendChild(emojiSpan);
             }
 
             const infoSection = document.createElement('div');
@@ -561,7 +579,14 @@
                 console.error('Error loading image:', error);
                 imageSection.classList.remove('loading');
                 imageSection.className = 'folder-image no-image';
-                imageSection.innerHTML = uploadsButton.outerHTML + '📁';
+                // Clear existing content and rebuild
+                imageSection.innerHTML = '';
+                imageSection.appendChild(uploadsButton);
+                // Create emoji element
+                const emojiSpan = document.createElement('span');
+                emojiSpan.textContent = '📁';
+                emojiSpan.style.fontSize = '64px';
+                imageSection.appendChild(emojiSpan);
             }
         }
 
