@@ -490,7 +490,7 @@
                 <img src="Logo.png" alt="Abu Mod Trailers Logo" class="logo">
                 <div>
                     <h1>📁 3D Trailers Gallery</h1>
-                    <p class="header-subtitle">Professional trailer management system</p>
+                    <p class="header-subtitle" id="folderCount">Professional trailer management system</p>
                 </div>
             </div>
             <div class="header-controls">
@@ -586,11 +586,21 @@
 
         let allFolders = []; // Store all folders globally
 
+        function updateFolderCount(displayedCount, totalCount) {
+            const folderCountElement = document.getElementById('folderCount');
+            if (displayedCount === totalCount) {
+                folderCountElement.textContent = `Showing ${totalCount} folder${totalCount !== 1 ? 's' : ''}`;
+            } else {
+                folderCountElement.textContent = `Showing ${displayedCount} of ${totalCount} folder${totalCount !== 1 ? 's' : ''}`;
+            }
+        }
+
         function displayFolders(folders) {
             const galleryContainer = document.getElementById('galleryContainer');
 
             if (!folders || folders.length === 0) {
                 galleryContainer.innerHTML = '<div class="error-message"><strong>No folders found</strong></div>';
+                updateFolderCount(0, 0);
                 return;
             }
 
@@ -639,6 +649,7 @@
             // Display filtered and sorted folders
             if (filteredFolders.length === 0) {
                 galleryContainer.innerHTML = '<div class="error-message"><strong>No folders match your search</strong></div>';
+                updateFolderCount(0, allFolders.length);
                 return;
             }
 
@@ -647,6 +658,9 @@
                 const card = createFolderCard(folder);
                 galleryContainer.appendChild(card);
             });
+
+            // Update folder count
+            updateFolderCount(filteredFolders.length, allFolders.length);
         }
 
         function createFolderCard(folder) {

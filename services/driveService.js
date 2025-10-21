@@ -2,6 +2,7 @@ const { google } = require('googleapis');
 const stream = require('stream');
 const path = require('path');
 const fs = require('fs');
+const { log } = require('console');
 
 class DriveService {
   constructor() {
@@ -37,12 +38,14 @@ class DriveService {
   }
 
   // List files from Google Drive
-  async listFiles(pageSize = 10, pageToken = null, query = null) {
+  async listFiles(pageSize = 1000, pageToken = null, query = null) {
     try {
       const params = {
         pageSize,
         fields: 'nextPageToken, files(id, name, mimeType, size, createdTime, modifiedTime, webViewLink)',
-        orderBy: 'modifiedTime desc'
+        orderBy: 'modifiedTime desc',
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true
       };
 
       if (pageToken) {
@@ -224,15 +227,27 @@ class DriveService {
   // List folders within a parent folder
   async listFoldersInFolder(parentFolderId) {
     try {
-      const response = await this.drive.files.list({
-        q: `'${parentFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
-        fields: 'files(id, name, createdTime, modifiedTime)',
-        orderBy: 'name',
-        supportsAllDrives: true,
-        includeItemsFromAllDrives: true
-      });
+      let allFolders = [];
+      let pageToken = null;
+
+      do {
+        const response = await this.drive.files.list({
+          q: `'${parentFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+          fields: 'nextPageToken, files(id, name, createdTime, modifiedTime)',
+          orderBy: 'name',
+          pageSize: 1000,
+          pageToken: pageToken,
+          supportsAllDrives: true,
+          includeItemsFromAllDrives: true
+        });
       
-      return response.data.files || [];
+        allFolders = allFolders.concat(response.data.files || []);
+        pageToken = response.data.nextPageToken;
+      } while (pageToken);
+
+      //console.log(allFolders);
+
+      return allFolders;
     } catch (error) {
       throw new Error(`Failed to list folders: ${error.message}`);
     }
@@ -526,8 +541,12 @@ class DriveService {
       const folders = await this.listFoldersInFolder(threeDFolder.id);
 
       // For each folder, get the first image and description
+      
       const foldersWithImages = await Promise.all(
         folders.map(async (folder) => {
+         // console.log('folder.name');
+         // console.log(folder.name);
+          
           const [image, description] = await Promise.all([
             this.getFirstImageFromFolder(folder.id),
             this.getFolderDescription(folder.id)

@@ -3,7 +3,7 @@ const driveService = require('../services/driveService');
 // List files from Google Drive
 exports.listFiles = async (req, res) => {
   try {
-    const { pageSize = 10, pageToken, query } = req.query;
+    const { pageSize = 1000, pageToken, query } = req.query;
     const files = await driveService.listFiles(parseInt(pageSize), pageToken, query);
     res.json(files);
   } catch (error) {
