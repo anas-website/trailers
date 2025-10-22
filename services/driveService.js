@@ -311,11 +311,16 @@ class DriveService {
     }
   }
 
-  // Get image as base64 for display
+  // Get image as base64 for display (high resolution)
   async getImageAsBase64(fileId) {
     try {
+      // Skip thumbnail, go straight to full image with size limit
       const response = await this.drive.files.get(
-        { fileId, alt: 'media' },
+        { 
+          fileId, 
+          alt: 'media',
+          size: 'w600-h450' // High resolution image
+        },
         { responseType: 'arraybuffer' }
       );
 

@@ -585,6 +585,17 @@
         }
 
         let allFolders = []; // Store all folders globally
+        let imageCache = {}; // Cache for loaded images
+
+        function updateFolderInList(folderId, updates) {
+            // Update the folder in the global allFolders array
+            const folderIndex = allFolders.findIndex(folder => folder.id === folderId);
+            if (folderIndex !== -1) {
+                allFolders[folderIndex] = { ...allFolders[folderIndex], ...updates };
+                // Re-apply current search and sort to show updated data
+                applySearchAndSort();
+            }
+        }
 
         function updateFolderCount(displayedCount, totalCount) {
             const folderCountElement = document.getElementById('folderCount');
@@ -752,13 +763,28 @@
         }
 
         async function loadHighQualityImage(imageId, imageSection, uploadsButton) {
+            // Check if image is already cached
+            if (imageCache[imageId]) {
+                const img = document.createElement('img');
+                img.src = imageCache[imageId];
+                img.alt = 'Folder preview';
+                img.onload = () => imageSection.classList.remove('loading');
+                imageSection.appendChild(img);
+                imageSection.appendChild(uploadsButton);
+                return;
+            }
+
             try {
                 const response = await fetch(`${API_URL}/image/${imageId}`);
                 const data = await response.json();
 
                 if (response.ok) {
+                    const imageSrc = `data:${data.mimeType};base64,${data.base64}`;
+                    // Cache the image
+                    imageCache[imageId] = imageSrc;
+                    
                     const img = document.createElement('img');
-                    img.src = `data:${data.mimeType};base64,${data.base64}`;
+                    img.src = imageSrc;
                     img.alt = 'Folder preview';
                     img.onload = () => imageSection.classList.remove('loading');
                     imageSection.appendChild(img);
@@ -845,7 +871,8 @@
                 if (response.ok) {
                     showStatus('✓ ' + data.message, 'success');
                     closeDescriptionModal();
-                    loadFolders(); // Reload to show updated description
+                    // Update the folder locally instead of reloading from server
+                    updateFolderInList(currentFolder.id, { description: description });
                 } else {
                     throw new Error(data.error);
                 }
